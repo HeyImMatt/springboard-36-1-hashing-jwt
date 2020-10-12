@@ -15,7 +15,7 @@ class User {
    */
 
   static async register({username, password, first_name, last_name, phone}) {
-    const hashedPwd = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
+    let hashedPwd = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
     const result = await db.query(
       `INSERT INTO users (
         username,
@@ -28,38 +28,33 @@ class User {
         VALUES ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
         RETURNING username, password, first_name, last_name, phone`,
         [username, hashedPwd, first_name, last_name, phone]);
-      
-      return result.rows[0];
+    return result.rows[0];
   }
 
   /** Authenticate: is this username/password valid? Returns boolean. */
 
   static async authenticate(username, password) {
     const result = await db.query(
-      `SELECT 
-        password
-        FROM users
-        WHERE username = $1`,
-        [username]);
-    const user = result.rows[0];
-    if (await bcrypt.compare(password, user.password) === true) {
-      return true;
-    }
-    return false;
+      "SELECT password FROM users WHERE username = $1",
+      [username]);
+  let user = result.rows[0];
+
+  return user && await bcrypt.compare(password, user.password);
   }
 
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
     const result = await db.query(
-      `UPDATE
-        users
-        SET last_login_at = current_timestamp
-        WHERE username = $1`,
-        [username]);
-    if (result.length === 0) {
-      throw new ExpressError('Username not found', 404)
-    }
+      `UPDATE users
+         SET last_login_at = current_timestamp
+         WHERE username = $1
+         RETURNING username`,
+      [username]);
+
+  if (!result.rows[0]) {
+    throw new ExpressError(`No such user: ${username}`, 404);
+  }
   }
 
   /** All: basic info on all users:
