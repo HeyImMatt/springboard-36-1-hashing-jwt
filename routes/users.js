@@ -12,6 +12,14 @@ const ExpressError = require("../expressError");
  *
  **/
 
+router.get("/", async (req, res, next) => {
+  try {
+    const users = await User.all();
+    return res.json({users})
+  } catch (err) {
+    return next(err);
+  }
+})
 
 /** GET /:username - get detail of users.
  *
