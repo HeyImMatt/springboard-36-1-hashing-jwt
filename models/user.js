@@ -152,10 +152,48 @@ class User {
    * [{id, from_user, body, sent_at, read_at}]
    *
    * where from_user is
-   *   {id, first_name, last_name, phone}
+   *   {username, first_name, last_name, phone}
    */
 
-  static async messagesTo(username) { }
+  static async messagesTo(username) { 
+    const results = await db.query(
+      `SELECT 
+        m.id, 
+        m.from_username,
+        f.username as from_username,
+        f.first_name as from_first_name,
+        f.last_name as from_last_name,
+        f.phone as from_phone,
+        m.to_username, 
+        m.body, 
+        m.sent_at, 
+        m.read_at
+      FROM messages as m
+        JOIN users as f on m.from_username = f.username
+      WHERE m.to_username = $1`,
+      [username]);
+
+    const messages = results.rows;
+
+    if (!messages) {
+      throw new ExpressError('No messages found', 404)
+    }
+
+    return messages.map((m) => {
+      return {
+        id: m.id,
+        from_user: {
+          username: m.from_username,
+          first_name: m.from_first_name,
+          last_name: m.from_last_name,
+          phone: m.from_phone,
+        },
+        body: m.body,
+        sent_at: m.sent_at,
+        read_at: m.read_at,
+      }
+    })
+  }
 }
 
 
