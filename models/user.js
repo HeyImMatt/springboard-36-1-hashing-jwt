@@ -51,12 +51,15 @@ class User {
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
-    await db.query(
+    const result = await db.query(
       `UPDATE
         users
         SET last_login_at = current_timestamp
         WHERE username = $1`,
         [username]);
+    if (result.length === 0) {
+      throw new ExpressError('Username not found', 404)
+    }
   }
 
   /** All: basic info on all users:
